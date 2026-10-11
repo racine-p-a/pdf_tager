@@ -52,7 +52,6 @@ fn main() -> anyhow::Result<()> {
             add_calibre(&args.path_to_pdf, &metadata_path)?;
         }
     }
-
     Ok(())
 }
 
