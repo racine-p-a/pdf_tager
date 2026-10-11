@@ -56,7 +56,6 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-
 fn add_calibre(path_to_pdf: &Path, path_to_metadata: &Path) -> anyhow::Result<()> {
     // Lire et analyser le fichier OPF.
     let xml_content = fs::read_to_string(path_to_metadata)?;
