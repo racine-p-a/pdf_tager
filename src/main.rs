@@ -1,15 +1,14 @@
 use clap::{Parser, Subcommand};
-use std::path::PathBuf;
 use lopdf::{Document, Object, StringFormat};
 use roxmltree::Document as XmlDocument;
 use std::collections::BTreeMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[derive(Parser)]
 struct Cli {
-    /// The path to the PDF file.
-    path_to_pdf: PathBuf,
+    /// The path to the PDF file (optional for add-calibre).
+    path_to_pdf: Option<PathBuf>,
 
     #[command(subcommand)]
     action_to_do: Action,
@@ -34,25 +33,101 @@ fn main() -> anyhow::Result<()> {
     let args = Cli::parse();
 
     match args.action_to_do {
-        Action::List => print_tags(&args.path_to_pdf)?,
+        Action::List => {
+            let path = args.path_to_pdf
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("Le chemin du PDF est obligatoire pour list"))?;
+
+            print_tags(path)?;
+        }
 
         Action::Add {
             tag_name,
             tag_value,
-        } => add_tag(&args.path_to_pdf, &tag_name, &tag_value)?,
+        } => {
+            let path = args.path_to_pdf
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("Le chemin du PDF est obligatoire pour add"))?;
+
+            add_tag(path, &tag_name, &tag_value)?;
+        }
 
         Action::AddCalibre { path_to_metadata } => {
-            let metadata_path = path_to_metadata.unwrap_or_else(|| {
-                args.path_to_pdf
-                    .parent()
-                    .unwrap_or(std::path::Path::new("."))
-                    .join("metadata.opf")
-            });
+            match (args.path_to_pdf, path_to_metadata) {
+                (Some(pdf_path), Some(metadata_path)) => {
+                    add_calibre(&pdf_path, &metadata_path)?;
+                }
 
-            add_calibre(&args.path_to_pdf, &metadata_path)?;
+                (Some(pdf_path), None) => {
+                    let metadata_path = pdf_path
+                        .parent()
+                        .unwrap_or(Path::new("."))
+                        .join("metadata.opf");
+
+                    add_calibre(&pdf_path, &metadata_path)?;
+                }
+
+                (None, Some(metadata_path)) => {
+                    anyhow::bail!(
+                        "Pour fournir un fichier OPF, indique aussi le chemin du PDF."
+                    );
+                }
+
+                (None, None) => {
+                    let (pdf_path, metadata_path) = find_pdf_and_opf()?;
+
+                    println!("PDF         : {}", pdf_path.display());
+                    println!("Métadonnées : {}", metadata_path.display());
+
+                    add_calibre(&pdf_path, &metadata_path)?;
+                }
+            }
         }
     }
+
     Ok(())
+}
+
+
+fn find_pdf_and_opf() -> anyhow::Result<(PathBuf, PathBuf)> {
+    let mut pdf_files = Vec::new();
+    let mut opf_files = Vec::new();
+
+    for entry in fs::read_dir(".")? {
+        let path = entry?.path();
+
+        if !path.is_file() {
+            continue;
+        }
+
+        if path.extension()
+            .and_then(|ext| ext.to_str())
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("pdf"))
+        {
+            pdf_files.push(path);
+        } else if path.file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.eq_ignore_ascii_case("metadata.opf"))
+        {
+            opf_files.push(path);
+        }
+    }
+
+    if pdf_files.len() != 1 {
+        anyhow::bail!(
+            "Un seul fichier PDF doit être présent dans le dossier courant ; {} trouvé(s).",
+            pdf_files.len()
+        );
+    }
+
+    if opf_files.len() != 1 {
+        anyhow::bail!(
+            "Un seul fichier metadata.opf doit être présent dans le dossier courant ; {} trouvé(s).",
+            opf_files.len()
+        );
+    }
+
+    Ok((pdf_files.remove(0), opf_files.remove(0)))
 }
 
 fn add_calibre(path_to_pdf: &Path, path_to_metadata: &Path) -> anyhow::Result<()> {
