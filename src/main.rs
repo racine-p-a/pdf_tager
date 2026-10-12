@@ -14,17 +14,19 @@ struct Cli {
 
 #[derive(clap::Subcommand)]
 enum Action {
-    List,  // pdf_tager example.pdf list
+    List, // pdf_tager example.pdf list
 
-    Add { // pdf_tager example.pdf add my_tag my_value
+    Add {
+        // pdf_tager example.pdf add my_tag my_value
         tag_name: String,
         tag_value: String,
     },
 
     Purge, // pdf_tager example.pdf purge
 
-    Rm { // pdf_tager example.pdf rm Author
-        tag_name: String
+    Rm {
+        // pdf_tager example.pdf rm Author
+        tag_name: String,
     },
 }
 
@@ -36,7 +38,10 @@ fn main() -> anyhow::Result<()> {
             print_tags(&args.path_to_pdf)?;
         }
 
-        Action::Add {tag_name, tag_value} => {
+        Action::Add {
+            tag_name,
+            tag_value,
+        } => {
             add_tag(&args.path_to_pdf, &tag_name, &tag_value)?;
         }
 
@@ -67,9 +72,7 @@ fn rm_tag(path_to_pdf: &Path, tag_name: &str) -> anyhow::Result<()> {
     let info = match doc.trailer.get(b"Info")?.clone() {
         Object::Reference(id) => doc.get_object_mut(id)?.as_dict_mut()?,
         Object::Dictionary(_) => {
-            anyhow::bail!(
-                "Can't get the Dictionnary Info of this pdf."
-            );
+            anyhow::bail!("Can't get the Dictionnary Info of this pdf.");
         }
         _ => anyhow::bail!("The Dictionnary info of the pdf is invalid"),
     };
@@ -149,11 +152,7 @@ fn print_tags(path_to_pdf: &Path) -> anyhow::Result<()> {
         };
 
         for (key, value) in dictionary.iter() {
-            println!(
-                "{}: {:?}",
-                String::from_utf8_lossy(key),
-                value
-            );
+            println!("{}: {:?}", String::from_utf8_lossy(key), value);
         }
     } else {
         println!("No metadata Info found.");
