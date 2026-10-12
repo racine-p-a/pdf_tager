@@ -31,13 +31,13 @@ sudo install -Dm755 target/release/pdf_tager /usr/local/bin/pdf_tager
 The following examples assume that you added the command to your system. If not, just change `pdf_tager` with
 `path_to_your_executable_pdf_tager`.  
 
-### List metadata
+### List metadata fields
 
 ```shell
 pdf_tager path/to/your/file.pdf list
 ```
 
-### Add metadata
+### Add or update a metadata field
 
 ```shell
 # Add the tag
@@ -46,7 +46,7 @@ pdf_tager path/to/your/file.pdf add Title "My Wonderful Title"
 pdf_tager path/to/your/file.pdf list
 ```
 
-### Remove metadata
+### Remove metadata field(s)
 
 ```shell
 # Will remove the tag "Title"
